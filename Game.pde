@@ -6,9 +6,24 @@ float boardSpeed = 0.7;
 
 float boardSize = 50;
 
+boolean addCylinderMode = false;
+
 PVector ballLocation;
 PVector ballVelocity;
 PVector gravity;
+
+float cylinderBaseSize = 4;
+float cylinderHeight = 9;
+int cylinderResolution = 40;
+
+PShape closedCylinder = new PShape();
+PShape openCylinder = new PShape();
+PShape topCylinder = new PShape();
+PShape bottomCylinder = new PShape();
+
+ArrayList<PVector> cylinderList;
+
+Mover ball;
 
 void setup() {
   size(1000, 700, P3D);  // size always goes first!
@@ -17,62 +32,105 @@ void setup() {
   }
   frameRate(60);
   
-  ballLocation = new PVector(0, -4.65, 0);
-  ballVelocity = new PVector(0, 0, 0);
-  gravity = new PVector(0, 0.04, 0);
+  ball = new Mover();
+  cylinderList = new ArrayList<PVector>();
+  
+  createCylinder();
 }
 void draw() {
-  movement();
   
-  noStroke();
-  camera(width/2, height/2 - 20, depth, width/2, height/2, 0, 0, 1, 0);
   directionalLight(200, 150, 100, 0, -1, 0);
   directionalLight(130, 130, 130, 100, 1, 0);
   ambientLight(102, 102, 102);
   background(200);
   
-  pushMatrix();
-  translate(width/2, height/2, 0);
+  if (addCylinderMode == true){
+    camera(width/2, 200, 0.1, width/2, height/2, 0, 0, 1, 0);
+    
+    translate(width/2, height/2, 0);
+    pushMatrix();
+    scale(1, 0.07, 1);
+    fill(60, 130, 170);
+    box(boardSize);
+    popMatrix();
+  }
+  else {
+    ball.checkEdges();
   
-  rotateX(rotationX);
-  rotateY(rotationY);
-  rotateZ(rotationZ);
-  pushMatrix();
-  scale(1, 0.07, 1);
+    noStroke();
+    camera(width/2, height/2 - 20, depth, width/2, height/2, 0, 0, 1, 0);
+    
+    translate(width/2, height/2, 0);
+    
+    rotateX(rotationX);
+    rotateY(rotationY);
+    rotateZ(rotationZ);
+    
+    pushMatrix();
+    scale(1, 0.07, 1);
+    fill(60, 130, 170);
+    box(boardSize);
+    popMatrix();
+    
+    ball.display();
+  }
+  
+  for (int i=0; i<cylinderList.size(); i++){
+    pushMatrix();
+    translate(cylinderList.get(i).x, 0, cylinderList.get(i).y);
+    rotateX(PI/2);
+    //rotateY(rotationY);
+    //rotateZ(rotationZ);
+    shape(closedCylinder);
+    popMatrix();
+  }
   
   
-  fill(60, 130, 170);
-
-  box(boardSize);
-  popMatrix();
-  fill(0, 255, 0);
-  translate(ballLocation.x, ballLocation.y, ballLocation.z);
-  sphere(3);
-  popMatrix();
 }
 
-void movement(){
-  PVector gravityForce = new PVector(sin(rotationZ) * gravity.y, 0, -sin(rotationX) * gravity.y);
-  float normalForce = 1;
-  float mu = 0.01;
-  float frictionMagnitude = normalForce * mu;
-  PVector friction = ballVelocity.get();
-  friction.mult(-1);
-  friction.normalize();
-  friction.mult(frictionMagnitude);
-  
-  ballVelocity.add(gravityForce);
-  ballVelocity.add(friction);
-  
-  ballLocation.add(ballVelocity);
-  
-  if ((ballLocation.x > boardSize/2) || (ballLocation.x < -boardSize/2)) {
-    ballVelocity.x = ballVelocity.x * -1;
+void createCylinder(){
+  float angle;
+  float[] x = new float[cylinderResolution + 1];
+  float[] y = new float[cylinderResolution + 1];
+  //get the x and y position on a circle for all the sides
+  for (int i = 0; i < x.length; i++) {
+    angle = (TWO_PI / cylinderResolution) * i;
+    x[i] = sin(angle) * cylinderBaseSize;
+    y[i] = cos(angle) * cylinderBaseSize;
   }
-  if ((ballLocation.z > boardSize/2) || (ballLocation.z < -boardSize/2)) {
-    ballVelocity.z = ballVelocity.z * -1;
+  
+  closedCylinder = createShape(GROUP);
+  
+  openCylinder = createShape();
+  openCylinder.beginShape(QUAD_STRIP);
+  //draw the border of the cylinder
+  for (int i = 0; i < x.length; i++) {
+    openCylinder.vertex(x[i], y[i], 0);
+    openCylinder.vertex(x[i], y[i], cylinderHeight);
   }
-
+  openCylinder.endShape();
+  
+  topCylinder = createShape();
+  topCylinder.beginShape(TRIANGLES);
+  for (int i = 1; i < x.length; i++) {
+    topCylinder.vertex(x[i], y[i], 0);
+    topCylinder.vertex(x[i-1], y[i-1], 0);
+    topCylinder.vertex(0, 0, 0);
+  }
+  topCylinder.endShape();
+  
+  bottomCylinder = createShape();
+  bottomCylinder.beginShape(TRIANGLES);
+  for (int i = 1; i < x.length; i++) {
+    bottomCylinder.vertex(x[i], y[i], cylinderHeight);
+    bottomCylinder.vertex(x[i-1], y[i-1], cylinderHeight);
+    bottomCylinder.vertex(0, 0, cylinderHeight);
+  }
+  bottomCylinder.endShape();
+  
+  closedCylinder.addChild(openCylinder);
+  closedCylinder.addChild(topCylinder);
+  closedCylinder.addChild(bottomCylinder); 
 }
 
 void keyPressed() {
@@ -82,6 +140,27 @@ void keyPressed() {
     }
     else if (keyCode == LEFT) {
       rotationY -= 0.06 * boardSpeed;
+    }
+    else if (keyCode == SHIFT) {
+      addCylinderMode = true;
+    }
+  }
+}
+void keyReleased() {
+  if (key == CODED) {
+    if (keyCode == SHIFT) {
+      addCylinderMode = false;
+    }
+  }
+}
+
+void mouseClicked() {
+  if (addCylinderMode == true){
+    if (mouseX >= 250 && mouseX <= 740 && mouseY >= 100 && mouseY <= 590){ // A CHANGER
+      float x = map(mouseX, 250, 740, -boardSize/2, boardSize/2);
+      float y = map(mouseY, 100, 590, -boardSize/2, boardSize/2);
+      
+      cylinderList.add(new PVector(x, y));
     }
   }
 }
