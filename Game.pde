@@ -1,5 +1,3 @@
-@pjs preload="texture.png";
-
 float depth = 100;
 float rotationX = 0.0;
 float rotationY = 0.0;
@@ -93,6 +91,9 @@ void draw() {
 }
 
 void createCylinder() {
+
+  noStroke();
+  fill(255, 0, 0);
   float angle;
   float[] x = new float[cylinderResolution + 1];
   float[] y = new float[cylinderResolution + 1];
@@ -106,10 +107,7 @@ void createCylinder() {
   closedCylinder = createShape(GROUP);
 
   openCylinder = createShape();
-  PImage img = loadImage("texture.png");
   openCylinder.beginShape(QUAD_STRIP);
-
-  //openCylinder.texture(img);
   //draw the border of the cylinder
   for (int i = 0; i < x.length; i++) {
     openCylinder.vertex(x[i], y[i], 0);
@@ -118,20 +116,18 @@ void createCylinder() {
   openCylinder.endShape();
 
   topCylinder = createShape();
-  topCylinder.beginShape(TRIANGLES);
-  for (int i = 1; i < x.length; i++) {
-    topCylinder.vertex(x[i], y[i], 0);
-    topCylinder.vertex(x[i-1], y[i-1], 0);
-    topCylinder.vertex(0, 0, 0);
+  topCylinder.beginShape(TRIANGLE_FAN);
+  topCylinder.vertex(0, 0, 0);
+  for (int i = 0; i < x.length; i++) {
+    topCylinder.vertex(x[i], y[i], cylinderHeight);
   }
   topCylinder.endShape();
 
   bottomCylinder = createShape();
-  bottomCylinder.beginShape(TRIANGLES);
-  for (int i = 1; i < x.length; i++) {
+  bottomCylinder.beginShape(TRIANGLE_FAN);
+  bottomCylinder.vertex(0, 0, cylinderHeight);
+  for (int i = 0; i < x.length; i++) {
     bottomCylinder.vertex(x[i], y[i], cylinderHeight);
-    bottomCylinder.vertex(x[i-1], y[i-1], cylinderHeight);
-    bottomCylinder.vertex(0, 0, cylinderHeight);
   }
   bottomCylinder.endShape();
 
@@ -161,18 +157,21 @@ void keyReleased() {
 
 void mouseClicked() {
   if (addCylinderMode == true) {
-    if (mouseX >= 250 && mouseX <= 740 && mouseY >= 100 && mouseY <= 590) { // A CHANGER
-      float x = map(mouseX, 250, 740, -boardSize/2, boardSize/2);
-      float y = map(mouseY, 100, 590, -boardSize/2, boardSize/2);
+    float coin1 = screenX(-boardSize/2, 0, boardSize/2);
+    float coin2 = screenX(boardSize/2, 0, boardSize/2);
+    float boardWidthOnScreen = coin2 - coin1;
+    float zoom = boardSize/boardWidthOnScreen;
+    float x = mouseX - width/2;
+    float y = mouseY - height/2;
+
+    if (width/2 - boardWidthOnScreen/2 <= mouseX && mouseX <= width/2 + boardWidthOnScreen/2 && height/2 - boardWidthOnScreen/2 <= mouseY && mouseY <= height/2 + boardWidthOnScreen) { // PAS CHANGER
 
       PVector n = new PVector(ball.location.x, 0, ball.location.z);
-      n.sub(new PVector(x, 0, y));
+      n.sub(new PVector(x*zoom, 0, y*zoom));
 
       if (n.mag() > cylinderBaseSize + ballSize) { // cylindre pas dans ball
-        cylinderList.add(new PVector(x, y));
+        cylinderList.add(new PVector(x*zoom, y*zoom));
       }
-
-      
     }
   }
 }
