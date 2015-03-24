@@ -14,8 +14,10 @@ class Mover {
   void display() {
     pushMatrix();
     fill(0, 255, 0);
+    
     translate(location.x, location.y, location.z);
     sphere(ballSize);
+    fill(255, 255, 255);
     popMatrix();
   }
   void checkEdges() {
@@ -36,21 +38,33 @@ class Mover {
     if (location.x > boardSize/2){
       velocity.x = velocity.x * -1;
       location.x = boardSize/2;
+      
+      score = -velocity.mag();
+      totalScore += score;
     }
     
     if (location.x < -boardSize/2){
       velocity.x = velocity.x * -1;
       location.x = -boardSize/2;
+      
+      score = -velocity.mag();
+      totalScore += score;
     }
     
     if (location.z > boardSize/2){
       velocity.z = velocity.z * -1;
       location.z = boardSize/2;
+      
+      score = -velocity.mag();
+      totalScore += score;
     }
     
     if (location.z < -boardSize/2){
       velocity.z = velocity.z * -1;
       location.z = -boardSize/2;
+      
+      score = -velocity.mag();
+      totalScore += score;
     }
   }
   
@@ -61,6 +75,10 @@ class Mover {
        n.sub(new PVector(cylinderList.get(i).x, 0, cylinderList.get(i).y));
        
        if (n.mag() < cylinderBaseSize + ballSize){ // collision
+         
+         score = velocity.mag();
+         totalScore += score;
+       
          n.normalize();
          PVector temp = n.get();
          temp.mult(2);

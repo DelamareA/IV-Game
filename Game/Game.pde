@@ -9,8 +9,6 @@ float ballSize = 3;
 
 boolean addCylinderMode = false;
 
-PVector ballLocation;
-PVector ballVelocity;
 PVector gravity;
 
 float cylinderBaseSize = 4;
@@ -22,18 +20,27 @@ PShape openCylinder = new PShape();
 PShape topCylinder = new PShape();
 PShape bottomCylinder = new PShape();
 
-PGraphics background;
-PGraphics topViewSurface;
-
-float backgroundSurfaceHeight = 150;
-float topViewSurfaceSize = backgroundSurfaceHeight - 10;
-
 ArrayList<PVector> cylinderList;
 
 float coin1; // coin du plateau 1 
 float coin2; // coin du plateau 2 
 
+PGraphics backgroundSurface;
+PGraphics topViewSurface;
+PGraphics scoreSurface;
+PGraphics barChartSurface;
+
+float score;
+float totalScore;
+int nbCurrentScore = 0;
+int nbScoreMax;
+
+int timeSinceLastEvent = 0;
+
+float[] tabScore;
+
 Mover ball;
+HScrollbar hs;
 
 void setup() {
   size(1000, 700, P3D);  // size always goes first!
@@ -41,20 +48,26 @@ void setup() {
     frame.setResizable(true);
   }
   frameRate(60);
-  textureMode(IMAGE);
+
+  backgroundSurface = createGraphics(width, 150, P2D);
+  topViewSurface = createGraphics(backgroundSurface.height - 10, backgroundSurface.height - 10, P2D);
+  scoreSurface = createGraphics(120, backgroundSurface.height - 10, P2D);
+  barChartSurface = createGraphics(backgroundSurface.width - topViewSurface.width - scoreSurface.width - 70, backgroundSurface.height - 40, P2D);
+  nbScoreMax = (int)(barChartSurface.width/(pow(4.0, 0.5)));
+  tabScore = new float[nbScoreMax];
 
   ball = new Mover();
   cylinderList = new ArrayList<PVector>();
 
   createCylinder();
-  
-  background = createGraphics(width, 150, P2D);
-  
- 
-  topViewSurface = createGraphics((int)topViewSurfaceSize, (int)topViewSurfaceSize, P2D);
+
+  score = 0.0;
+  totalScore = 0.0;
+
+  hs = new HScrollbar(topViewSurface.width + scoreSurface.width +50, height - 40, backgroundSurface.width - topViewSurface.width - scoreSurface.width - 70, 20);
 }
 void draw() {
-  
+
   pushMatrix();
 
   directionalLight(200, 150, 100, 0, -1, 0);
@@ -95,23 +108,34 @@ void draw() {
     box(boardSize);
     popMatrix();
   }
-  
+
   ball.display();
 
-    for (int i=0; i<cylinderList.size (); i++) {
-      pushMatrix();
-      translate(cylinderList.get(i).x, 0, cylinderList.get(i).y);
-      rotateX(PI/2);
-      //rotateY(rotationY);
-      //rotateZ(rotationZ);
-      shape(closedCylinder);
-      popMatrix();
-    }
+  for (int i=0; i<cylinderList.size (); i++) {
+    pushMatrix();
+    translate(cylinderList.get(i).x, 0, cylinderList.get(i).y);
+    rotateX(PI/2);
+    shape(closedCylinder);
+    popMatrix();
+  }
+
   popMatrix();
-    drawBackground();
-    drawTopViewSurface();
-    image(background, 0, height-backgroundSurfaceHeight);
-    image(topViewSurface, 5, height-backgroundSurfaceHeight+5);
+
+  directionalLight(130, 130, 130, 0, 0, -1);
+
+  drawBackgroundSurface();
+  drawScoreSurface();
+  drawBarChartSurface();
+  drawTopViewSurface();
+  image(backgroundSurface, 0, height - backgroundSurface.height);
+  image(topViewSurface, 5, height-backgroundSurface.height+5);
+  image(scoreSurface, topViewSurface.width + 20, height - scoreSurface.height - 5);
+  image(barChartSurface, topViewSurface.width + scoreSurface.width +50, height - scoreSurface.height - 5);
+
+  hs.update();
+  hs.display();
+
+  fill(255);
 }
 
 void createCylinder() {
@@ -163,10 +187,10 @@ void createCylinder() {
 void keyPressed() {
   if (key == CODED) {
     /*sif (keyCode == RIGHT) {
-      rotationY += 0.06 * boardSpeed;
-    } else if (keyCode == LEFT) {
-      rotationY -= 0.06 * boardSpeed;
-    } else */if (keyCode == SHIFT) {
+     rotationY += 0.06 * boardSpeed;
+     } else if (keyCode == LEFT) {
+     rotationY -= 0.06 * boardSpeed;
+     } else */    if (keyCode == SHIFT) {
       addCylinderMode = true;
     }
   }
@@ -181,6 +205,7 @@ void keyReleased() {
 
 void mouseClicked() {
   if (addCylinderMode == true) {
+
     float boardWidthOnScreen = coin2 - coin1;
     float zoom = boardSize/boardWidthOnScreen;
     float x = mouseX - width/2;
@@ -199,19 +224,21 @@ void mouseClicked() {
 }
 
 void mouseDragged() {
-  rotationX = -map(mouseY - height/2, -height/2, height/2, -PI/3, PI/3) * boardSpeed;
-  if (rotationX < -PI/3)
-    rotationX = -PI/3;
+  if (!hs.locked) {
+    rotationX = -map(mouseY - height/2, -height/2, height/2, -PI/3, PI/3) * boardSpeed;
+    if (rotationX < -PI/3)
+      rotationX = -PI/3;
 
-  if (rotationX > PI/3)
-    rotationX = PI/3;
+    if (rotationX > PI/3)
+      rotationX = PI/3;
 
-  rotationZ = map(mouseX - width/2, -width/2, width/2, -PI/3, PI/3) * boardSpeed;
-  if (rotationZ < -PI/3)
-    rotationZ = -PI/3;
+    rotationZ = map(mouseX - width/2, -width/2, width/2, -PI/3, PI/3) * boardSpeed;
+    if (rotationZ < -PI/3)
+      rotationZ = -PI/3;
 
-  if (rotationZ > PI/3)
-    rotationZ = PI/3;
+    if (rotationZ > PI/3)
+      rotationZ = PI/3;
+  }
 }
 
 void mouseWheel(MouseEvent event) {
