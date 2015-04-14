@@ -20,6 +20,8 @@ PShape openCylinder = new PShape();
 PShape topCylinder = new PShape();
 PShape bottomCylinder = new PShape();
 
+PShape tree;
+
 ArrayList<PVector> cylinderList;
 
 float coin1; // coin du plateau 1 
@@ -60,6 +62,9 @@ void setup() {
   cylinderList = new ArrayList<PVector>();
 
   createCylinder();
+  
+  tree = loadShape("Arbre2.obj");
+  tree.scale(1);
 
   score = 0.0;
   totalScore = 0.0;
@@ -114,8 +119,8 @@ void draw() {
   for (int i=0; i<cylinderList.size (); i++) {
     pushMatrix();
     translate(cylinderList.get(i).x, 0, cylinderList.get(i).y);
-    rotateX(PI/2);
-    shape(closedCylinder);
+    rotateX(PI);
+    shape(tree);
     popMatrix();
   }
 
