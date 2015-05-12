@@ -1,10 +1,15 @@
 import processing.video.*;
 import java.util.Comparator;
 import java.util.Collections;
+import java.util.Random;
 
 Capture cam;
 PImage img;
 PImage sob;
+
+ArrayList<int[]> cycles = new ArrayList<int[]>();
+int[][] graph;
+
 public void setup() {
   size(640, 480);
   String[] cameras = Capture.list();
@@ -25,10 +30,11 @@ public void draw() {
     cam.read();
   }
   img = cam.get();
-  sob = sobel(hueTh(convolute(img)));
-  image(hueTh(convolute(img)), 0, 0);
+  //img = loadImage("board4.jpg");
+  sob = sobel(convolute(hueTh(img)));
+  image(convolute(hueTh(img)), 0, 0);
   //image(img, 0, 0);
-  hough(sob, 4);
+  hough(sob, 6);
 }
 
 public PImage convolute(PImage arg) {
@@ -117,8 +123,8 @@ public PImage sobel(PImage arg) {
 
   for (int i = 0; i < arg.width * arg.height; i++) {
     float value = brightness(arg.pixels[i]);
-    if (hue(arg.pixels[i]) >= 40 && hue(img.pixels[i]) <= 150) {
-      thImg.pixels[i] = img.pixels[i];
+    if (value >= 20 && value <= 255) {
+      thImg.pixels[i] = color(255);
     } else {
       thImg.pixels[i] = color(0);
     }
@@ -154,8 +160,8 @@ public PImage sobel(PImage arg) {
             clampedY = arg.height - 1;
           }
 
-          sum_h += brightness( arg.pixels[clampedY * arg.width + clampedX]) * hKernel[i][j];
-          sum_v += brightness( arg.pixels[clampedY * arg.width + clampedX]) * vKernel[i][j];
+          sum_h += brightness( thImg.pixels[clampedY * thImg.width + clampedX]) * hKernel[i][j];
+          sum_v += brightness( thImg.pixels[clampedY * thImg.width + clampedX]) * vKernel[i][j];
         }
       }
 
@@ -185,8 +191,8 @@ public PImage hueTh (PImage arg) {
 
   for (int i = 0; i < arg.width * arg.height; i++) {
     float value = brightness(arg.pixels[i]);
-    if (hue(arg.pixels[i]) >= 60 && hue(arg.pixels[i]) <= 170 && saturation(arg.pixels[i]) >= 30 && saturation(arg.pixels[i]) <= 240 && brightness(arg.pixels[i]) >= 30 && brightness(arg.pixels[i]) <= 240) {
-    //if (hue(arg.pixels[i]) >= 120 /*&& hue(arg.pixels[i]) <= 140 && saturation(arg.pixels[i]) >= 60 */&& saturation(arg.pixels[i]) <= 140 && brightness(arg.pixels[i]) >= 110 /*&& brightness(arg.pixels[i]) <= 180*/) {
+    if (hue(arg.pixels[i]) >= 60 && hue(arg.pixels[i]) <= 170 && saturation(arg.pixels[i]) >= 30 && saturation(arg.pixels[i]) <= 255 && brightness(arg.pixels[i]) >= 40 && brightness(arg.pixels[i]) <= 230) {
+      //if (hue(arg.pixels[i]) >= 120 /*&& hue(arg.pixels[i]) <= 140 && saturation(arg.pixels[i]) >= 60 */&& saturation(arg.pixels[i]) <= 140 && brightness(arg.pixels[i]) >= 110 /*&& brightness(arg.pixels[i]) <= 180*/) {
       thImg.pixels[i] = color(255);
     } else {
       thImg.pixels[i] = color(0);
@@ -240,10 +246,10 @@ public PImage hough(PImage edgeImg, int nLines) {
 
 
   /*PImage houghImg = createImage(rDim + 2, phiDim + 2, ALPHA);
-  for (int i = 0; i < accumulator.length; i++) {
-    houghImg.pixels[i] = color(min(255, accumulator[i]));
-  }
-  houghImg.updatePixels();*/
+   for (int i = 0; i < accumulator.length; i++) {
+   houghImg.pixels[i] = color(min(255, accumulator[i]));
+   }
+   houghImg.updatePixels();*/
 
   ArrayList<Integer> bestCandidates = new ArrayList<Integer>();
   int minVotes = 60;
@@ -283,7 +289,7 @@ public PImage hough(PImage edgeImg, int nLines) {
   }
 
   Collections.sort(bestCandidates, new HoughComparator(accumulator));
-  
+
   ArrayList<PVector> lines = new ArrayList<PVector>(); 
 
 
@@ -294,9 +300,9 @@ public PImage hough(PImage edgeImg, int nLines) {
     int accR = idx - (accPhi + 1) * (rDim + 2) - 1;
     float r = (accR - (rDim - 1) * 0.5f) * discretizationStepsR;
     float phi = accPhi * discretizationStepsPhi;
-    
+
     lines.add(new PVector(r, phi));
-    
+
     // Cartesian equation of a line: y = ax + b
     // in polar, y = (-cos(phi)/sin(phi))x + (r/sin(phi))
     // => y = 0 : x = r / cos(phi)
@@ -330,13 +336,59 @@ public PImage hough(PImage edgeImg, int nLines) {
         line(x2, y2, x3, y3);
     }
   }
-  
+
   getIntersections(lines);
+
+  build(lines, edgeImg.width, edgeImg.height);
+
+  ArrayList<int[]> oldquads = findCycles();
+
+  ArrayList<int[]> quads = new ArrayList<int[]>();
+
+  for (int i = 0; i < oldquads.size (); i++) {
+    if (oldquads.get(i).length == 4) {
+      quads.add(oldquads.get(i));
+    }
+  }
+  
+  println("Size : " + quads.size());
+  
+  
+
+  for (int[] quad : quads) {
+    PVector l1 = lines.get(quad[0]);
+    PVector l2 = lines.get(quad[1]);
+    PVector l3 = lines.get(quad[2]);
+    PVector l4 = lines.get(quad[3]);
+    // (intersection() is a simplified version of the
+    // intersections() method you wrote last week, that simply
+    // return the coordinates of the intersection between 2 lines)
+    PVector c12 = intersection(l1, l2);
+    PVector c23 = intersection(l2, l3);
+    PVector c34 = intersection(l3, l4);
+    PVector c41 = intersection(l4, l1);
+    
+    if (validArea(c12, c23, c34, c41, 600000, 200000) && isConvex(c12, c23, c34, c41) && nonFlatQuad(c12, c23, c34, c41)){
+      // Choose a random, semi-transparent colour
+      Random random = new Random();
+      fill(color(min(255, random.nextInt(300)), 
+      min(255, random.nextInt(300)), 
+      min(255, random.nextInt(300)), 50));
+      quad(c12.x, c12.y, c23.x, c23.y, c34.x, c34.y, c41.x, c41.y);
+    }
+  }
 
 
   //houghImg.resize(400, 400);
 
   return null;
+}
+
+public PVector intersection(PVector l1, PVector l2){
+  ArrayList<PVector> lines = new ArrayList<PVector>();
+  lines.add(l1);
+  lines.add(l2);
+  return getIntersections(lines).get(0);
 }
 
 public ArrayList<PVector> getIntersections(ArrayList<PVector> lines) {
@@ -350,7 +402,7 @@ public ArrayList<PVector> getIntersections(ArrayList<PVector> lines) {
       double d = cos(line2.y) * sin(line1.y) - cos(line1.y) * sin(line2.y);
       int x = (int) ((line2.x * sin(line1.y) - line1.x * sin(line2.y)) / d);
       int y = (int) (( - line2.x * cos(line1.y) + line1.x * cos(line2.y)) / d);
-      
+
       intersections.add(new PVector(x, y));
       fill(255, 128, 0);
       ellipse(x, y, 10, 10);
