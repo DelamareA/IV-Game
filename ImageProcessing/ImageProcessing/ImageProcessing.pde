@@ -1,6 +1,7 @@
 import java.util.Comparator;
 import java.util.Collections;
 import java.util.Random;
+import java.util.Map;
 
 PImage img;
 PImage sob;
@@ -13,7 +14,7 @@ public void setup() {
   size(1800, 450);
 }
 public void draw() {
-  img = loadImage("board4.jpg");
+  img = loadImage("board1.jpg");
   img.resize(600, 450);
   sob = sobel(convolute(hueTh(convolute(img)))); // first, we blur and then we threshold, and then we blur again
   
@@ -178,9 +179,9 @@ public PImage hueTh (PImage arg) {
 
   for (int i = 0; i < arg.width * arg.height; i++) {
     float value = brightness(arg.pixels[i]);
+    /* FOR A BETTER RESULT WITH BOARD 4, PLEASE DECOMMENT THE 2ND IF */
     if (hue(arg.pixels[i]) >= 100 && hue(arg.pixels[i]) <= 135 && saturation(arg.pixels[i]) >= 120 && saturation(arg.pixels[i]) <= 255 && brightness(arg.pixels[i]) >= 60 && brightness(arg.pixels[i]) <= 160) {
-    //if (hue(arg.pixels[i]) >= 60 && hue(arg.pixels[i]) <= 170 && saturation(arg.pixels[i]) >= 30 && saturation(arg.pixels[i]) <= 255 && brightness(arg.pixels[i]) >= 40 && brightness(arg.pixels[i]) <= 230) {
-      //if (hue(arg.pixels[i]) >= 120 /*&& hue(arg.pixels[i]) <= 140 && saturation(arg.pixels[i]) >= 60 */&& saturation(arg.pixels[i]) <= 140 && brightness(arg.pixels[i]) >= 110 /*&& brightness(arg.pixels[i]) <= 180*/) {
+    // if (hue(arg.pixels[i]) >= 90 && hue(arg.pixels[i]) <= 135 && saturation(arg.pixels[i]) >= 65 && saturation(arg.pixels[i]) <= 255 && brightness(arg.pixels[i]) >= 30 && brightness(arg.pixels[i]) <= 140) {
       thImg.pixels[i] = color(255);
     } else {
       thImg.pixels[i] = color(0);
@@ -200,17 +201,13 @@ public PImage hough(PImage edgeImg, int nLines) {
   // our accumulator (with a 1 pix margin around)
   int[] accumulator = new int[(phiDim + 2) * (rDim + 2)];
 
-  // pre-compute the sin and cos values
-  float[] tabSin = new float[phiDim];
-  float[] tabCos = new float[phiDim];
-  float ang = 0;
-  float inverseR = 1.f / discretizationStepsR;
-  for (int accPhi = 0; accPhi < phiDim; ang += discretizationStepsPhi, accPhi++) {
-    // we can also pre-multiply by (1/discretizationStepsR) since we need it in the Hough loop
-    tabSin[accPhi] = (float) (Math.sin(ang) * inverseR);
-    tabCos[accPhi] = (float) (Math.cos(ang) * inverseR);
+  // pre-compute the sin and cos values, using maps, as array give bad result
+  HashMap<Float, Float> mapCos = new HashMap<Float, Float>();
+  HashMap<Float, Float> mapSin = new HashMap<Float, Float>();
+  for (float phi = 0.0f; phi < Math.PI; phi += discretizationStepsPhi) {
+    mapCos.put((Float)phi, ((Double) Math.cos(phi)).floatValue());
+    mapSin.put((Float)phi, ((Double) Math.sin(phi)).floatValue());
   }
-
 
   // Fill the accumulator: on edge points (ie, white pixels of the edge
   // image), store all possible (r, phi) pairs describing lines going
@@ -221,7 +218,7 @@ public PImage hough(PImage edgeImg, int nLines) {
       if (brightness(edgeImg.pixels[y * edgeImg.width + x]) != 0) {
 
         for (float i = 0.0f; i < Math.PI; i += discretizationStepsPhi) {
-          double r = (x * tabCos[(int) (i / discretizationStepsPhi)] + y * tabSin[(int) (i / discretizationStepsPhi)]) / discretizationStepsR;
+          double r = (x * mapCos.get(i) + y * mapSin.get(i)) / discretizationStepsR;
           r += (rDim - 1) / 2;
           accumulator[(int) ((i / discretizationStepsPhi + 1) * (rDim + 2) +( r))] += 1;
         }
@@ -356,7 +353,7 @@ public PImage hough(PImage edgeImg, int nLines) {
     PVector c34 = intersection(l3, l4);
     PVector c41 = intersection(l4, l1);
     
-    if (validArea(c12, c23, c34, c41, 600000, 200000) && isConvex(c12, c23, c34, c41) && nonFlatQuad(c12, c23, c34, c41)){
+    if (validArea(c12, c23, c34, c41, 600000, 50000) && isConvex(c12, c23, c34, c41) && nonFlatQuad(c12, c23, c34, c41)){
       // Choose a random, semi-transparent colour
       Random random = new Random();
       fill(color(min(255, random.nextInt(300)), 
