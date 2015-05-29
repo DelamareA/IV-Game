@@ -1,0 +1,18 @@
+addi t2, zero, 1
+addi t3, zero, 0
+addi t0, zero, 0x2000
+nop
+nop
+main:
+stw t2, 0(t0)
+addi t2, t2, 1
+call fct
+nop
+br main
+nop
+nop
+fct:
+stw t3, 8(t0)
+addi t3, t3, -1
+ret
+nop
