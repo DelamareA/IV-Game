@@ -14,7 +14,7 @@ public void setup() {
   size(1800, 450);
 }
 public void draw() {
-  img = loadImage("board1.jpg");
+  img = loadImage("board4.jpg");
   img.resize(600, 450);
   sob = sobel(convolute(hueTh(convolute(img)))); // first, we blur and then we threshold, and then we blur again
   

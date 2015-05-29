@@ -1,0 +1,56 @@
+main:
+addi t3, zero, 3
+addi a0, zero, 20
+addi sp, zero, 0x2000
+call fibo
+nop
+stw v0, 0x2000(zero)
+end:
+br end
+nop
+nop
+fibo:
+addi v0, zero, 0
+beq a0, zero, return; if n is 0, F(n) = 0
+nop
+nop
+addi v0, zero, 1
+blt a0, t3, return; if n is 1 or 2, F(n) = 1
+nop
+nop
+addi sp, sp, -12
+nop
+nop
+nop
+stw ra, 8(sp)
+stw a0, 4(sp)
+addi a0, a0, -1
+
+call fibo
+nop
+
+stw v0, 0(sp)
+
+ldw a0, 4(sp)
+nop
+nop
+nop
+addi a0, a0, -2
+nop
+call fibo
+nop
+
+ldw t0, 0(sp)
+nop
+nop
+nop
+add v0, v0, t0
+
+ldw ra, 8(sp)
+addi sp, sp, 12
+nop
+nop
+
+return:
+ret
+nop

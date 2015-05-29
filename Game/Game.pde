@@ -63,8 +63,8 @@ void setup() {
 
   createCylinder();
   
-  tree = loadShape("Arbre2.obj");
-  tree.scale(1);
+  tree = loadShape("tourMoodleText.obj");
+  tree.scale(10000);
 
   score = 0.0;
   totalScore = 0.0;
