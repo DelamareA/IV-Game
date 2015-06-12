@@ -20,6 +20,8 @@ boolean isInQuad(PVector pt, PVector p0, PVector p1, PVector p2, PVector p3){
   return isInTriangle(pt, p0, p1, p2) || isInTriangle(pt, p1, p2, p3) || isInTriangle(pt, p0, p1, p3) || isInTriangle(pt, p0, p1, p3);
 }
 
+/*
+
 boolean areAllInQuad(PImage arg, PVector p0, PVector p1, PVector p2, PVector p3){
   int nb = 0;
   for (int x = 0; x < arg.width; x++) {
@@ -48,4 +50,4 @@ int nbInQuad(PImage arg, PVector p0, PVector p1, PVector p2, PVector p3){
   }
   
   return nb;
-}
+}*/

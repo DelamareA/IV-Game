@@ -69,23 +69,12 @@ int saturationThHigh = 255;
 int brightnessThLow = 65;
 int brightnessThHigh = 255;
 
-int hueThLow3 = 110;
+int hueThLow3 = 110; // used for a better detection of the board, used in the 'preHueTh' function
 int hueThHigh3 = 130;
 int saturationThLow3 = 115;
 int saturationThHigh3 = 255;
 int brightnessThLow3 = 65;
 int brightnessThHigh3 = 255;
-
-int hueThLow2 = 75;
-int hueThHigh2 = 130;
-int saturationThLow2 = 0;
-int saturationThHigh2 = 150;
-int brightnessThLow2 = 130;
-int brightnessThHigh2 = 255;
-
-int redThLow2 = 70;
-int greenThLow2 = 140;
-int blueThLow2 = 130;
 
 ArrayList<int[]> cycles = new ArrayList<int[]>();
 int[][] graph;
@@ -110,7 +99,6 @@ void setup() {
 
   ball = new Mover();
   cylinderList = new ArrayList<PVector>();
-  //createCylinder();
   closedCylinder = loadShape("tourTextUnit.obj");
   closedCylinder.scale(0.12f);
   closedCylinder.rotateX(PI/2);
@@ -128,7 +116,7 @@ void setup() {
 
   hs = new HScrollbar(topViewSurface.width + scoreSurface.width +50, height - 40, backgroundSurface.width - topViewSurface.width - scoreSurface.width - 70, 20);
   
-  /*String[] cameras = Capture.list();
+  /*String[] cameras = Capture.list(); // Code for webcam
   if (cameras.length == 0) {
     println("There are no cameras available for capture.");
     exit();
@@ -141,7 +129,7 @@ void setup() {
     cam.start();
   }*/
   
-  cam = new Movie(this, "C:/Users/HP/Documents/EPFL/4/InfoVisuel/Game/testvideo.mp4"); //Put the video in the same directory
+  cam = new Movie(this, "C:/Users/HP/Documents/EPFL/4/InfoVisuel/Game/testvideo.mp4");
   cam.loop();
 
 }
@@ -194,7 +182,7 @@ void draw() {
 
     pushMatrix();
     scale(1, 0.07, 1);
-   fill(0, 91, 0);
+    fill(0, 91, 0);
     box(boardSize);
     popMatrix();
   }
@@ -214,7 +202,6 @@ void draw() {
      pushMatrix();
      if (sheeps.get(i).sheep_is_alive){
         translate(sheeps.get(i).sheep_position.x, -3.2 - sheeps.get(i).sheep_height , sheeps.get(i).sheep_position.y);
-       //translate(boardSize/2, -3.2 - sheeps.get(i).sheep_height, -boardSize/2); 
      }
      else{
          translate(sheeps.get(i).sheep_position.x, -1.65 , sheeps.get(i).sheep_position.y); 
@@ -249,112 +236,37 @@ void draw() {
   }
   img = cam.get();
   //img = loadImage("testReflet.png");
-  //img = imgTest;
   img.resize(320, 240);
-  //image(img, 0, 0);
+  image(img, 0, 0);
   
   //sob = sobel(whiteTh(convolute(hueTh(convolute(convolute(convolute(img)))))));
-  sob = sobel(whiteTh(convolute(hueTh(preHueTh(convolute(convolute(convolute(img))))))));
+  PVector[][] gradient = new PVector[img.width][img.height];
+  for (int i = 0; i < img.width; i++){
+    for (int j = 0; j < img.height; j++){
+      gradient[i][j] = new PVector();
+    }
+  }
+  sob = sobel(whiteTh(convolute(hueTh(preHueTh(convolute(convolute(convolute(img))))))) , gradient);
   //sob = sobel(testQuad(img));
   //image(imgTest, 0, 0);
-  image(whiteTh(convolute(hueTh(preHueTh(convolute(convolute(img)))))), 0, 0);
+  //image(whiteTh(convolute(hueTh(preHueTh(convolute(convolute(img)))))), 0, 0);
   //image(sob, 0, 0);
-  //image(preHueTh2(convolute(convolute(img))), 0, 0);
+  //image(preHueTh3(convolute(convolute(img))), 0, 0);
   
   //sob = sobel(preHueTh2(convolute(convolute(img))));
-  hough(sob, 4);
+  hough(sob, 4, gradient);
   
   fill(255);
 }
 
-void createCylinder() {
-
-  noStroke();
-  fill(255, 0, 0);
-  float angle;
-  float[] x = new float[cylinderResolution + 1];
-  float[] y = new float[cylinderResolution + 1];
-  //get the x and y position on a circle for all the sides
-  for (int i = 0; i < x.length; i++) {
-    angle = (TWO_PI / cylinderResolution) * i;
-    x[i] = sin(angle) * cylinderBaseSize;
-    y[i] = cos(angle) * cylinderBaseSize;
-  }
-
-  closedCylinder = createShape(GROUP);
-
-  openCylinder = createShape();
-  openCylinder.beginShape(QUAD_STRIP);
-  //draw the border of the cylinder
-  for (int i = 0; i < x.length; i++) {
-    openCylinder.vertex(x[i], y[i], 0);
-    openCylinder.vertex(x[i], y[i], cylinderHeight);
-  }
-  openCylinder.endShape();
-
-  topCylinder = createShape();
-  topCylinder.beginShape(TRIANGLE_FAN);
-  topCylinder.vertex(0, 0, 0);
-  for (int i = 0; i < x.length; i++) {
-    topCylinder.vertex(x[i], y[i], cylinderHeight);
-  }
-  topCylinder.endShape();
-
-  bottomCylinder = createShape();
-  bottomCylinder.beginShape(TRIANGLE_FAN);
-  bottomCylinder.vertex(0, 0, cylinderHeight);
-  for (int i = 0; i < x.length; i++) {
-    bottomCylinder.vertex(x[i], y[i], cylinderHeight);
-  }
-  bottomCylinder.endShape();
-
-  closedCylinder.addChild(openCylinder);
-  closedCylinder.addChild(topCylinder);
-  closedCylinder.addChild(bottomCylinder);
-}
 
 void keyPressed() {
   if (key == CODED) {
-    /*if (keyCode == RIGHT) {
-     rotationY += 0.06 * boardSpeed;
-     } else if (keyCode == LEFT) {
-     rotationY -= 0.06 * boardSpeed;
-     } else */    if (keyCode == SHIFT) {
+    if (keyCode == SHIFT) {
       addCylinderMode = true;
     }
   }
-  else if (key == 'q'){
-    hueThLow --;
-    println("hueThLow = " + hueThLow);
-  }
-  else if (key == 'w'){
-    hueThLow ++;
-    println("hueThLow = " + hueThLow);
-  }
-  else if (key == 'e'){
-    hueThHigh --;
-    println("hueThHigh = " + hueThHigh);
-  }
-  else if (key == 'r'){
-    hueThHigh ++;
-    println("hueThHigh = " + hueThHigh);
-  }
-  else if (key == 'a'){
-    saturationThLow --;
-    println("saturationThLow = " + saturationThLow);
-  }
-  else if (key == 's'){
-    saturationThLow ++;
-    println("saturationThLow = " + saturationThLow);
-  }
-  else if (key == 'y'){
-    brightnessThLow --;
-    println("brightnessThLow = " + brightnessThLow);
-  }
-  else if (key == 'x'){
-    brightnessThLow ++;
-    println("brightnessThLow = " + brightnessThLow);
-  }
+  
 }
 void keyReleased() {
   if (key == CODED) {
@@ -362,7 +274,6 @@ void keyReleased() {
       addCylinderMode = false;
     }
   }
-  
 }
 
 void mouseClicked() {
@@ -384,25 +295,6 @@ void mouseClicked() {
     }
   }
 }
-
-/*void mouseDragged() {
-  if (!hs.locked) {
-    rotationX = -map(mouseY - height/2, -height/2, height/2, -PI/3, PI/3) * boardSpeed;
-    if (rotationX < -PI/3)
-      rotationX = -PI/3;
-
-    if (rotationX > PI/3)
-      rotationX = PI/3;
-
-    rotationZ = map(mouseX - width/2, -width/2, width/2, -PI/3, PI/3) * boardSpeed;
-    if (rotationZ < -PI/3)
-      rotationZ = -PI/3;
-
-    if (rotationZ > PI/3)
-      rotationZ = PI/3;
-      
-  }
-}*/
 
 void mouseWheel(MouseEvent event) {
   if (event.getCount() < 0.0) {

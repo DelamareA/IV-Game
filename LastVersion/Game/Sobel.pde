@@ -1,4 +1,4 @@
-public class RunnableSobel implements Runnable {
+public class RunnableSobel implements Runnable { // class used to provide sobel algorithm in parallel
   int id;
   int starting_row;
   int ending_row;
@@ -7,13 +7,15 @@ public class RunnableSobel implements Runnable {
   int width;
   int height;
   int threshold;
+  float[] buffer;
+  PVector[][] gradient;
 
   int[][] kernelX= {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
   int[][] kernelY= {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
 
   public RunnableSobel(int id, int starting_row, int ending_row,
       PImage original_image, PImage result_image, int width,
-      int height) {
+      int height, PVector[][] gradient) {
     super();
     this.id = id;
     this.starting_row = starting_row;
@@ -23,16 +25,17 @@ public class RunnableSobel implements Runnable {
     this.width = width;
     this.height = height;
     this.threshold = threshold;
+    this.buffer = new float[original_image.width * original_image.height];
+    this.gradient = gradient;
     
   }
 
-  @Override
   public void run() {
     float max = 0;
     for (int y = starting_row; y < ending_row; y++) {
       for (int x = 0; x < width; x++) {
-        int convResultX = 0;
-        int convResultY = 0;
+        int sum_h = 0;
+        int sum_v = 0;
 
         for (int i = 0; i <= 2; i++) {
           for (int j = 0; j <= 2; j++) {
@@ -50,17 +53,26 @@ public class RunnableSobel implements Runnable {
               clampedY = height - 1;
             }
 
-            convResultX += original_image.pixels[clampedY * width + clampedX]
+            sum_h += original_image.pixels[clampedY * width + clampedX]
                 * kernelX[i][j];
-            convResultY += original_image.pixels[clampedY * width + clampedX]
+            sum_v += original_image.pixels[clampedY * width + clampedX]
                 * kernelY[i][j];
           }
         }
+        
+        gradient[x][y].x = sum_h;
+        gradient[x][y].y = sum_v;
+        
+        buffer[y * width + x] = sqrt(pow(sum_h, 2) + pow(sum_v, 2));
+        
+        if (buffer[y * width + x] > max) {
+          max = buffer[y * width + x];
+        }
 
-        if (Math.abs(convResultX) + Math.abs(convResultY) > threshold) {
-          result_image.pixels[y * width + x] = color(255, 255, 255);
+        if (buffer[y * width + x] > max * 0.3f) {
+          result_image.pixels[y * width + x] = color(255);
         } else {
-          result_image.pixels[y * width + x] = color(0, 0, 0);
+          result_image.pixels[y * width + x] = color(0);
         }
       }
     }

@@ -6,7 +6,7 @@ public PImage convolute(PImage arg) {
     }
     , 
     { 
-      20, 0, 20 // slightly modified, to remove green pixels
+      20, 0, 20 // slightly modified, to remove more noise
     }
     , 
     { 
@@ -51,128 +51,43 @@ public PImage convolute(PImage arg) {
   return result;
 }
 
-public PImage sobel(PImage arg) {
+public PImage sobel(PImage arg, PVector[][] gradient) {
   int nOfThreads = 8;
   Thread[] tabThread = new Thread[nOfThreads];
     
   PImage result = createImage(arg.width, arg.height, RGB);
   
   for (int i=0; i<nOfThreads; i++){
-    tabThread[i] = new Thread(new RunnableSobel(i, i * arg.height/nOfThreads, (i+1) * arg.height/nOfThreads, arg, result, arg.width, arg.height));
-    tabThread[i].start();
+    tabThread[i] = new Thread(new RunnableSobel(i, i * arg.height/nOfThreads, (i+1) * arg.height/nOfThreads, arg, result, arg.width, arg.height, gradient)); // create the threads
+    tabThread[i].start();  // and start them, each threads takes care of one part of the image
   }
   
   for (int i=0; i<nOfThreads; i++){
     try {
       tabThread[i].join();
     } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
   }
   return result;
 }
 
-public PImage DAlg(PImage arg) {
-  int nbRun = 10;
-  PImage thImg = createImage(arg.width, arg.height, RGB);
-  boolean[] tab = new boolean[arg.width * arg.height];
-  int clampedX;
-  int clampedY;
-  int index;
-  
-  for (int n = 0; n < nbRun; n++){
-    for (int y = 0; y < arg.height; y++) {
-      for (int x = 0; x < arg.width; x++) {
-        index = y * arg.width + x;
-        if (! tab[index]){
-          if (hue(arg.pixels[index]) >= hueThLow && hue(arg.pixels[index]) <= hueThHigh && saturation(arg.pixels[index]) >= saturationThLow && saturation(arg.pixels[index]) <= saturationThHigh && brightness(arg.pixels[index]) >= brightnessThLow && brightness(arg.pixels[index]) <= brightnessThHigh){
-            tab[index] = true;
-            thImg.pixels[index] = color(255);
-          }
-          //else if (hue(arg.pixels[index]) >= hueThLow2 && hue(arg.pixels[index]) <= hueThHigh2 && saturation(arg.pixels[index]) >= saturationThLow2 && saturation(arg.pixels[index]) <= saturationThHigh2 && brightness(arg.pixels[index]) >= brightnessThLow2 && brightness(arg.pixels[index]) <= brightnessThHigh2){
-          else if (red(arg.pixels[index]) >= redThLow2 && green(arg.pixels[index]) >= greenThLow2 && blue(arg.pixels[index]) >= blueThLow2){
-            for (int i = 0; i <= 2; i++) {
-              for (int j = 0; j <= 2; j++) {
-                clampedX = x + i - 1;
-                if (x + i - 1 < 0) {
-                  clampedX = 0;
-                } else if (x + i - 1 >= arg.width) {
-                  clampedX = arg.width - 1;
-                }
-    
-                clampedY = y + j - 1;
-                if (y + j - 1 < 0) {
-                  clampedY = 0;
-                } else if (y + j - 1 >= arg.height) {
-                  clampedY = arg.height - 1;
-                }
-                
-                if (abs(i) + abs(j) == 1 && tab[clampedY * arg.width + clampedX]){
-                  tab[index] = true;
-                  thImg.pixels[index] = color(255);
-                }
-              }
-            }
-          }
-        }
-        
-      }
-    }
-  }
-  return thImg;
-}
 
-public PImage preHueTh (PImage arg) { // this function only keeps the part of the image that is interesting
-  PImage thImg = createImage(arg.width, arg.height, RGB);
-  int minX, maxX, minY, maxY;
-  minX = arg.width;
-  maxX = 0;
-  minY = arg.height;
-  maxY = 0;
-
-  for (int x = 0; x < arg.width; x++) {
-    for (int y = 0; y < arg.height; y++) {
-      int i = y * arg.width + x;
-      thImg.pixels[i] = arg.pixels[i];
-      if (hue(arg.pixels[i]) >= hueThLow3 && hue(arg.pixels[i]) <= hueThHigh3 && saturation(arg.pixels[i]) >= saturationThLow3 && saturation(arg.pixels[i]) <= saturationThHigh3 && brightness(arg.pixels[i]) >= brightnessThLow3 && brightness(arg.pixels[i]) <= brightnessThHigh3) {
-        if (x < minX)
-          minX = x;
-        
-        if (x > maxX)
-          maxX = x;
-          
-        if (y < minY)
-          minY = y;
-          
-        if (y > maxY)
-          maxY = y;
-      }
-    }
-  }
-  for (int x = 0; x < arg.width; x++) {
-    for (int y = 0; y < arg.height; y++) {
-      if (x < minX || x > maxX || y < minY || y > maxY){
-        thImg.pixels[y * arg.width + x] = color(0);
-      }
-    }
-  }
-  return thImg;
-}
-
-public PImage preHueTh2 (PImage arg) { // this function only keeps the part of the image that is interesting
+public PImage preHueTh(PImage arg) { // this function replace the center of the board by a white quad, it's not perfect, but it removes most of the reflections, and only keeps the part of the image where the board is
   PImage thImg = createImage(arg.width, arg.height, RGB);
   int minX, maxX, minY, maxY;
   minX = arg.width - 1;
   maxX = 0;
   minY = arg.height - 1;
   maxY = 0;
+  int count = 0;
 
   for (int x = 0; x < arg.width; x++) {
     for (int y = 0; y < arg.height; y++) {
       int i = y * arg.width + x;
       thImg.pixels[i] = arg.pixels[i];
       if (hue(arg.pixels[i]) >= hueThLow3 && hue(arg.pixels[i]) <= hueThHigh3 && saturation(arg.pixels[i]) >= saturationThLow3 && saturation(arg.pixels[i]) <= saturationThHigh3 && brightness(arg.pixels[i]) >= brightnessThLow3 && brightness(arg.pixels[i]) <= brightnessThHigh3) {
+        count++;
         if (x < minX)
           minX = x;
         
@@ -187,10 +102,13 @@ public PImage preHueTh2 (PImage arg) { // this function only keeps the part of t
       }
     }
   }
+  if (count < 200){ // the board is not on the picture
+    return thImg;
+  }
   
-  int margin = 15;
+  int margin = 0;
   
-  PVector p0, p1, p2, p3;
+  PVector p0, p1, p2, p3; // these points represent the 'guessed' position of the corners
   PVector[] p0t = new PVector[2];
   PVector[] p1t = new PVector[2];
   PVector[] p2t = new PVector[2];
@@ -207,6 +125,8 @@ public PImage preHueTh2 (PImage arg) { // this function only keeps the part of t
   p1t[1] = new PVector(maxX + margin, -1);
   p2t[1] = new PVector(-1, minY - margin);
   p3t[1] = new PVector(-1, maxY + margin);
+  
+  // p0t[0] represents the leftmost point of the board with the smallest y value,  p0t[1] represents the leftmost point of the board with the biggest y value, and so on
   
   int smallY = maxY, bigY = minY;
   for (int y = 0; y < arg.height; y++) {
@@ -266,204 +186,34 @@ public PImage preHueTh2 (PImage arg) { // this function only keeps the part of t
   p3t[0].x = smallX - margin;
   p3t[1].x = bigX + margin;
   
-  int nbMin = arg.width * arg.height;
+  float a0 = area(p0t[1], p2t[0], p1t[0], p3t[1]);
+  float a1 = area(p0t[0], p2t[1], p1t[1], p3t[0]);
   
-  for (int a = 0; a <= 1; a++){
-    for (int b = 0; b <= 1; b++){
-      for (int c = 0; c <= 1; c++){
-        for (int d = 0; d <= 1; d++){
-          int nb = nbInQuad(arg, p0t[a], p1t[b], p2t[c], p3t[d]);
-          if (areAllInQuad(arg, p0t[a], p1t[b], p2t[c], p3t[d]) && nb < nbMin){
-            p0 = p0t[a];
-            p1 = p1t[b];
-            p2 = p2t[c];
-            p3 = p3t[d];
-            
-            nbMin = nb;
-            
-            println("Good");
-          }
-        }
-      }
-    }
+  if (a0 > a1){ // we select the most probable quad, which is the bigger one
+    p0 = p0t[1];
+    p1 = p1t[0];
+    p2 = p2t[0];
+    p3 = p3t[1];
   }
-  
-  if (p0.y == -1 || p1.y == -1 || p2.x == -1 || p3.x == -1){
-    return preHueTh(arg);
+  else {
+    p0 = p0t[0];
+    p1 = p1t[1];
+    p2 = p2t[1];
+    p3 = p3t[0];
   }
-  
-  //println(p0.y);
-  
-  fill(255, 128, 0);
-  ellipse(p0.x, p0.y, 10, 10);
-  ellipse(p1.x, p1.y, 10, 10);
-  ellipse(p2.x, p2.y, 10, 10);
-  ellipse(p3.x, p3.y, 10, 10);
-  
+
   for (int x = 0; x < arg.width; x++) {
     for (int y = 0; y < arg.height; y++) {
-      if (!isInQuad(new PVector(x, y), p0, p1, p2, p3)){
+      if (isInQuad(new PVector(x, y), p0, p1, p2, p3)){ // if the pixel is in the board with probability 100%, we paint it green
+        thImg.pixels[y * arg.width + x] = color(22, 109, 85);
+      }
+      if (x < minX || x > maxX || y < minY || y > maxY){ // if the pixel is not in the board with probability 100%, we paint it black
         thImg.pixels[y * arg.width + x] = color(0);
       }
     }
   }
   return thImg;
 }
-
-/*
-public PImage testQuad (PImage arg) { // this function TEST
-  PImage thImg = createImage(arg.width, arg.height, RGB);
-  int minX, maxX, minY, maxY;
-  minX = arg.width;
-  maxX = 0;
-  minY = arg.height;
-  maxY = 0;
-
-  for (int x = 0; x < arg.width; x++) {
-    for (int y = 0; y < arg.height; y++) {
-      int i = y * arg.width + x;
-      thImg.pixels[i] = arg.pixels[i];
-      if (hue(arg.pixels[i]) >= hueThLow3 && hue(arg.pixels[i]) <= hueThHigh3 && saturation(arg.pixels[i]) >= saturationThLow3 && saturation(arg.pixels[i]) <= saturationThHigh3 && brightness(arg.pixels[i]) >= brightnessThLow3 && brightness(arg.pixels[i]) <= brightnessThHigh3) {
-        if (x < minX)
-          minX = x;
-        
-        if (x > maxX)
-          maxX = x;
-          
-        if (y < minY)
-          minY = y;
-          
-        if (y > maxY)
-          maxY = y;
-          
-        //thImg.pixels[y * arg.width + x] = color(255);
-      }
-    }
-  }
-  
-  //println("minX : " + minX);
-  //println("maxX : " + maxX);
-  //println("minY : " + minY);
-  //println("maxY : " + maxY);
-  
-  boolean done = false;
-  PVector p0, p1, p2, p3;
-  p0 = new PVector(minX - 5, minY - 5);
-  p1 = new PVector(maxX + 5, minY - 5);
-  p2 = new PVector(minX - 5, maxY + 5);
-  p3 = new PVector(maxX + 5, maxY + 5);
-  
-  println(areAllInQuad(arg, p0, p1, p2, p3));
-  //println(isInTriangle(new PVector(50, 100), p1, p2, p3));
-  
-  while(!done){
-    
-    done = true;
-    p0.x ++;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p0.x --;
-      
-    }
-    else {
-      done = false;
-      println("p0.x : " + p0.x);
-    }
-    
-    p0.y ++;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p0.y --;
-      
-    }
-    else {
-      done = false;
-      println("p0.y : " + p0.y);
-    }
-    
-    p1.x --;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p1.x ++;
-      
-    }
-    else {
-      done = false;
-      println("p1.x : " + p1.x);
-    }
-    
-    p1.y ++;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p1.y --;
-      
-    }
-    else {
-      done = false;
-      println("p1.y : " + p1.y);
-    }
-    
-    p2.x ++;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p2.x --;
-      
-    }
-    else {
-      done = false;
-      println("p2.x : " + p2.x);
-    }
-    
-    p2.y --;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p2.y ++;
-      
-    }
-    else {
-      done = false;
-      println("p2.y : " + p2.y);
-    }
-    
-    p3.x --;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p3.x ++;
-      
-    }
-    else {
-      
-      done = false;
-      println("p3.x : " + p3.x);
-    }
-    
-    p3.y --;
-    if (!areAllInQuad(arg, p0, p1, p2, p3)){
-      p3.y ++;
-      
-    }
-    else {
-      done = false;
-      println("p3.y : " + p3.y);
-    }
-    println("p0.x : " + p0.x);
-    println("p0.y : " + p0.y);
-    println("p1.x : " + p1.x);
-    println("p1.y : " + p1.y);
-    println("p2.x : " + p2.x);
-    println("p2.y : " + p2.y);
-    println("p3.x : " + p3.x);
-    println("p3.y : " + p3.y);
-    
-  }
-  
-  for (int x = 0; x < arg.width; x++) {
-    for (int y = 0; y < arg.height; y++) {
-      int i = y * arg.width + x;
-      PVector pt = new PVector(x, y);
-      if (isInQuad(pt, p0, p1, p2, p3)) {
-        thImg.pixels[i] = color(255);
-      } else {
-        thImg.pixels[i] = color(0);
-      }
-    }
-  }
-  
-  return thImg;
-}*/
 
 public PImage hueTh (PImage arg) {
   PImage thImg = createImage(arg.width, arg.height, RGB);
@@ -493,7 +243,7 @@ public PImage whiteTh (PImage arg) {
   return thImg;
 }
 
-public PImage hough(PImage edgeImg, int nLines) {
+public PImage hough(PImage edgeImg, int nLines, PVector[][] gradient) {
   float discretizationStepsPhi = 0.04f;
   float discretizationStepsR = 0.9f;
   // dimensions of the accumulator
@@ -515,8 +265,8 @@ public PImage hough(PImage edgeImg, int nLines) {
   // Fill the accumulator: on edge points (ie, white pixels of the edge
   // image), store all possible (r, phi) pairs describing lines going
   // through the point.
-  for (int y = 1; y < edgeImg.height-1; y++) { // ATTENTION, MODIFICATION
-    for (int x = 1; x < edgeImg.width-1; x++) {
+  for (int y = 0; y < edgeImg.height; y++) {
+    for (int x = 0; x < edgeImg.width; x++) {
       // Are we on an edge?
       if (brightness(edgeImg.pixels[y * edgeImg.width + x]) != 0) {
         float beg = 0.0f;
@@ -524,20 +274,32 @@ public PImage hough(PImage edgeImg, int nLines) {
         float badInterBeg = -1.0f;
         float badInterEnd = -1.0f;
         
-        if (brightness(edgeImg.pixels[(y+1) * edgeImg.width + x]) != 0 && brightness(edgeImg.pixels[(y-1) * edgeImg.width + x]) != 0){ // vertical line
-          badInterBeg = (float)Math.PI/3;
-          badInterEnd = 2 * (float) Math.PI/3;
+        /*float margin = 10 * discretizationStepsPhi;
+        
+        double gradientAngle = Math.atan(gradient[x][y].x / gradient[x][y].y);
+        gradientAngle = gradientAngle % Math.PI;
+        
+        if (gradientAngle < 0)
+          gradientAngle += Math.PI;
+          
+          
+        beg = (float)gradientAngle - margin;
+        end = (float)gradientAngle + margin;
+        
+        if (end > Math.PI){
+          badInterBeg = end - (float)Math.PI;
+          badInterEnd = beg;
         }
-        else if (brightness(edgeImg.pixels[y * edgeImg.width + x + 1]) != 0 && brightness(edgeImg.pixels[y * edgeImg.width + x - 1]) != 0){ // horizontal line
-          beg = (((int)((Math.PI/3) / discretizationStepsPhi)) * discretizationStepsPhi);
-          end = (((int)((2 * Math.PI/3) / discretizationStepsPhi)) * discretizationStepsPhi);
-        }
+        else if (beg < 0){
+          badInterBeg = end;
+          badInterEnd = beg + (float)Math.PI;
+        }*/
 
-        for (float i = 0.0f; i < Math.PI; i += discretizationStepsPhi) {
-          if (!(i >= badInterBeg && i <= badInterEnd) && (i >= beg && i < end)){
-            double r = (x * mapCos.get(i) + y * mapSin.get(i)) / discretizationStepsR;
+        for (float phi = 0.0f; phi < Math.PI; phi += discretizationStepsPhi) {
+          if (!(phi >= badInterBeg && phi <= badInterEnd) && (phi >= beg && phi < end)){
+            double r = (x * mapCos.get(phi) + y * mapSin.get(phi)) / discretizationStepsR;
             r += (rDim - 1) / 2;
-            accumulator[(int) ((i / discretizationStepsPhi + 1) * (rDim + 2) +( r))] += 1;
+            accumulator[(int) ((phi / discretizationStepsPhi + 1) * (rDim + 2) +r)] ++;
           }
           
         }
@@ -556,9 +318,11 @@ public PImage hough(PImage edgeImg, int nLines) {
    houghImg.updatePixels();*/
 
   ArrayList<Integer> bestCandidates = new ArrayList<Integer>();
-  int minVotes = 10;
+  boolean[] valid = new boolean[(phiDim + 2) * (rDim + 2)];
+  int minVotes = 40;
 
-  int neighbourhood = 30;
+  int neighbourhoodPhi = 10;
+  int neighbourhoodR = 35;
   // only search around lines with more that this amount of votes
   // (to be adapted to your image)
   for (int accR = 0; accR < rDim; accR++) {
@@ -568,13 +332,15 @@ public PImage hough(PImage edgeImg, int nLines) {
       if (accumulator[idx] > minVotes) {
         boolean bestCandidate=true;
         // iterate over the neighbourhood
-        for (int dPhi=-neighbourhood/2; dPhi < neighbourhood/2+1 && bestCandidate; dPhi++) {
+        for (int dPhi=-neighbourhoodPhi/2; dPhi < neighbourhoodPhi/2+1 && bestCandidate; dPhi++) {
           int phi = accPhi+dPhi;
           if (phi < 0)
             phi = phiDim + accPhi+dPhi;
           if (phi >= phiDim)
             phi = -phiDim + accPhi+dPhi;
-          for (int dR=-neighbourhood/2; dR < neighbourhood/2 +1; dR++) {
+          
+          //int neighbourhoodR = (int)accR * neighbourhood * 0.05;
+          for (int dR=-neighbourhoodR/2; dR < neighbourhoodR/2 +1; dR++) {
             // check we are not outside the image
             if (accR+dR < 0 || accR+dR >= rDim) continue;
             int neighbourIdx = (phi + 1) * (rDim + 2) + accR + dR + 1;
@@ -583,11 +349,19 @@ public PImage hough(PImage edgeImg, int nLines) {
               bestCandidate=false;
               break;
             }
-            if (accPhi * discretizationStepsPhi < 0.17 || accPhi * discretizationStepsPhi > Math.PI - 0.17){ // if near vertical, check for opposite r
+            else if (accumulator[idx] == accumulator[neighbourIdx] && valid[neighbourIdx]) {
+              bestCandidate=false;
+              break;
+            }
+            if (accPhi * discretizationStepsPhi < 0.17 || accPhi * discretizationStepsPhi > Math.PI - 0.17) { // if near vertical, check for opposite r
               if (rDim-accR-1+dR < 0 || rDim-accR-1+dR >= rDim) continue;
               neighbourIdx = (phi + 1) * (rDim + 2) + rDim-accR-1 + dR + 1;
               if (accumulator[idx] < accumulator[neighbourIdx]) {
                 // the current idx is not a local maximum!
+                bestCandidate=false;
+                break;
+              }
+              else if (accumulator[idx] == accumulator[neighbourIdx] && valid[neighbourIdx]) {
                 bestCandidate=false;
                 break;
               }
@@ -598,6 +372,7 @@ public PImage hough(PImage edgeImg, int nLines) {
         if (bestCandidate) {
           // the current idx *is* a local maximum
           bestCandidates.add(idx);
+          valid[idx] = true;
         }
       }
     }
@@ -608,7 +383,7 @@ public PImage hough(PImage edgeImg, int nLines) {
   ArrayList<PVector> lines = new ArrayList<PVector>(); 
 
 
-  for (int i = 0; i < bestCandidates.size() && i < nLines; i++) {
+  for (int i = 0; i < bestCandidates.size() && i < nLines; i++) { //  && i < nLines
     
     int idx = bestCandidates.get(i);
     // first, compute back the (r, phi) polar coordinates:
@@ -616,8 +391,11 @@ public PImage hough(PImage edgeImg, int nLines) {
     int accR = idx - (accPhi + 1) * (rDim + 2) - 1;
     float r = (accR - (rDim - 1) * 0.5f) * discretizationStepsR;
     float phi = accPhi * discretizationStepsPhi;
-    //println("r" + i + " = " + r);
-    //println("phi" + i + " = " + phi);
+    println("r" + i + " = " + r);
+    println("accR" + i + " = " + accR);
+    println("rDim" + i + " = " + rDim);
+    println("phi" + i + " = " + phi);
+    println("acc : " + accumulator[idx]);
 
     lines.add(new PVector(r, phi));
 
@@ -638,7 +416,7 @@ public PImage hough(PImage edgeImg, int nLines) {
     // Finally, plot the lines
     
     
-    stroke(50 + i*40, 102, 0);
+    stroke(200, 102, 0);
     if (y0 > 0) {
       if (x1 > 0)
         line(x0, y0, x1, y1);
@@ -657,6 +435,7 @@ public PImage hough(PImage edgeImg, int nLines) {
     }
     
   }
+  /* A DECOMMENTER
 
   getIntersections(lines);
 
@@ -715,8 +494,9 @@ public PImage hough(PImage edgeImg, int nLines) {
 
 
   //houghImg.resize(400, 400);
-
+*/
   return null;
+  
 }
 
 public PVector intersection(PVector l1, PVector l2){

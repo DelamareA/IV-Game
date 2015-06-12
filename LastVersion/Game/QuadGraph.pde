@@ -259,6 +259,21 @@ public static boolean validArea(PVector c1, PVector c2, PVector c3, PVector c4, 
   return valid;
 }
 
+public static float area(PVector c1, PVector c2, PVector c3, PVector c4) {
+
+  PVector v21= PVector.sub(c1, c2);
+  PVector v32= PVector.sub(c2, c3);
+  PVector v43= PVector.sub(c3, c4);
+  PVector v14= PVector.sub(c4, c1);
+
+  float i1=v21.cross(v32).z;
+  float i2=v32.cross(v43).z;
+  float i3=v43.cross(v14).z;
+  float i4=v14.cross(v21).z;
+
+  return Math.abs(0.5f * (i1 + i2 + i3 + i4));
+}
+
 /** Compute the (cosine) of the four angles of the quad, and check they are all large enough
  * (the quad representing our board should be close to a rectangle)
  */
